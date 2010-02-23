@@ -35,10 +35,13 @@
 ;; your current project, leveraging the power of git if you are using it to
 ;; store your code.
 
-;; A project is defined either as:
+;; A project is defined as a directory which meets one of these conditions in
+;; the following order:
 ;;
+;; - The presence of a `.dir-locals.el' file (emacs23 style) or a
+;;   `.emacs-project' file (`project-local-variables' style).
 ;; - The git repository that the current buffer is in.
-;; - The project root defined in project-root.el, a library not included with
+;; - The project root defined in `project-root.el', a library not included with
 ;;   GNU Emacs.
 ;; - The current default-directory if none of the above is found.
 
@@ -48,12 +51,20 @@
 
 ;; ftf provides two main user functions:
 ;;
-;; - `ftf-find-file' which does a quick lookup on all 
-
-
-;; This file provides a method for quickly finding any file in a given
-;; project. Projects are defined as per the `project-local-variables'
-;; library, by the presence of a `.emacs-project' file in a directory.
+;; - `ftf-find-file' which does a filename search. It has been tested on large
+;;   projects; it takes slightly less than a second from command invocation to
+;;   prompt on the Chromium source tree (9,183 (cc|h) files as of the time of
+;;   this writing).
+;;
+;;   It uses git-ls-files for speed when available (such as the Chromium tree),
+;;   and falls back on a find statement at the project root/default-directory
+;;   when git is unavailable.
+;;
+;; - `ftf-grepsource' which greps all the files for the escaped pattern passed
+;;   in at the prompt.
+;;
+;;   It uses git-grep for speed when available (such as the Chromium tree),
+;;   and falls back on a find|xargs grep statement when not.
 
 ;; By default, it looks only for files whose names match
 ;; `ffip-regexp', but it's understood that that variable will be
@@ -87,6 +98,35 @@
   "A list of filetype patterns that grepsource will use. Obviously biased for
 chrome development.")
 
+(defun ftf-find-locals-directory ()
+  "Returns the directory that contains either `.dir-locals.el' or
+  `.emacs-project' or nil if no path components contain such a directory."
+  (defun parent-dir (path)
+    (file-name-directory (directory-file-name path)))
+  (defun dir-has-project-file (path)
+    (or (file-exists-p (concat path "/.dir-locals.el"))
+        (file-exists-p (concat path "/.emacs-project"))))
+  (let ((path default-directory)
+        (return-path nil))
+    (while path
+      (cond ((string-equal path "/")
+             (setq return-path nil
+                   path nil))
+            ((dir-has-project-file path)
+             (setq return-path path
+                   path nil))
+            (t (set 'path (parent-dir path)))))
+    return-path))
+
+(defun ftf-project-directory ()
+  "Returns what we should use as `default-directory'."
+  (or (ftf-find-locals-directory)
+      (ftf-get-top-git-dir default-directory)
+      ;; `project-details' is defined in the `project-root.el' package. This
+      ;; will be nil if it doesn't exist.
+      (cdr project-details)
+      default-directory))
+
 (defun ftf-get-find-command ()
   "Creates the raw, shared find command from `ftf-filetypes'."
   (concat "find . -path '*/.svn' -prune -o -name \""
@@ -118,7 +158,7 @@ not a git repository.."
   ;; find-files.
   (let ((quoted (replace-regexp-in-string "\"" "\\\\\"" cmd-args))
         (git-toplevel (ftf-get-top-git-dir default-directory))
-        (default-directory (or (cdr project-details) default-directory))
+        (default-directory (ftf-project-directory))
         (grep-use-null-device nil))
     (cond (git-toplevel ;; We can accelerate our grep using the git data.
            (grep (concat "git --no-pager grep -n -e \"" quoted "\" -- "
@@ -135,14 +175,12 @@ not a git repository.."
             (concat "git ls-files -- "
                     (mapconcat 'identity grepsource-filetypes " "))))
            (t
-            (let ((default-directory (or (cdr project-details)
-                                         default-directory)))
+            (let ((default-directory (ftf-project-directory)))
               (shell-command-to-string (ftf-get-find-command)))))))
 
 (defun ftf-project-files-hash ()
   "Returns a hashtable filled with file names as the key and "
-  (let ((default-directory (or (ftf-get-top-git-dir default-directory)
-                               default-directory))
+  (let ((default-directory (ftf-project-directory))
         (table (make-hash-table :test 'equal)))
     (mapcar (lambda (file)
               (let* ((file-name (file-name-nondirectory file))
