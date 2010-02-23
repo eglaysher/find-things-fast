@@ -49,11 +49,11 @@
 ;; our searching. Otherwise, we fallback on find statements. As a special
 ;; optimization, we prune ".svn" directories whenever we find.
 
-;; ftf provides two main user functions:
+;; ftf provides three main user functions:
 ;;
 ;; - `ftf-find-file' which does a filename search. It has been tested on large
 ;;   projects; it takes slightly less than a second from command invocation to
-;;   prompt on the Chromium source tree (9,183 (cc|h) files as of the time of
+;;   prompt on the Chromium source tree 9,183 files as of the time of
 ;;   this writing).
 ;;
 ;;   It uses git-ls-files for speed when available (such as the Chromium tree),
@@ -65,6 +65,11 @@
 ;;
 ;;   It uses git-grep for speed when available (such as the Chromium tree),
 ;;   and falls back on a find|xargs grep statement when not.
+;;
+;; - The `with-ftf-project-root' macro, which locally changes
+;;   `default-directory' to what find-things-fast thinks is the project
+;;   root. Two trivial example functions, `ftf-gdb' and `ftf-compile' are
+;;   provided which show it off.
 
 ;; By default, it looks only for files whose names match `ftf-filetypes'. The
 ;; defaults were chosen specifically for C++/Chromium development, but people
@@ -78,7 +83,10 @@
 ;; instead of `completing-read'.
 
 ;; Recommended binding:
-;; (global-set-key (kbd "C-x C-M-f") 'find-file-in-project)
+;; (global-set-key (kbd [f1]) 'ftf-find-file)
+;; (global-set-key (kbd [f2]) 'ftf-grepsource)
+;; (global-set-key (kbd [f4]) 'ftf-gdb)
+;; (global-set-key (kbd [f4]) 'ftf-compile)
 
 ;;; Code:
 
@@ -149,8 +157,14 @@ not a git repository.."
 
 (defun ftf-grepsource (cmd-args)
   "Greps the current project, leveraging local repository data
-  for speed and falling back on a big \"find | xargs grep\"
-  command if we aren't."
+for speed and falling back on a big \"find | xargs grep\"
+command if we aren't.
+
+The project's scope is defined first as a directory containing
+either a `.dir-locals.el' file or an `.emacs-project' file OR the
+root of the current git repository OR a project root defined by
+the optional `project-root.el' package OR the default directory
+if none of the above is found."
   (interactive (list (read-from-minibuffer "Grep project for string: ")))
   ;; When we're in a git repository, use git grep so we don't have to
   ;; find-files.
@@ -209,17 +223,20 @@ directory they are found in so that they are unique."
     file-alist))
 
 (defun ftf-uniqueify (file-cons)
-  "Set the car of the argument to include the directory name plus the file name."
+  "Set the car of the argument to include the directory name plus
+the file name."
   (setcar file-cons
 	  (concat (car file-cons) ": "
 		  (cadr (reverse (split-string (cdr file-cons) "/"))))))
 
-(defun find-file-in-project ()
+(defun ftf-find-file ()
   "Prompt with a completing list of all files in the project to find one.
 
-The project's scope is defined as the first directory containing
-an `.emacs-project' file. You can override this by locally
-setting the `ftf-project-root' variable."
+The project's scope is defined first as a directory containing
+either a `.dir-locals.el' file or an `.emacs-project' file OR the
+root of the current git repository OR a project root defined by
+the optional `project-root.el' package OR the default directory
+if none of the above is found."
   (interactive)
   (let* ((project-files (ftf-project-files-alist))
 	 (file (if (functionp 'ido-completing-read)
@@ -229,6 +246,22 @@ setting the `ftf-project-root' variable."
 				  (mapcar 'car project-files)))))
     (find-file (cdr (assoc file project-files)))))
 
+(defmacro with-ftf-project-root (&rest body)
+  "Run BODY with `default-directory' set to what the
+find-things-fast project root. A utility macro for any of your
+custom functions which might want to run "
+  `(let ((default-directory ,(ftf-project-directory)))
+          ,@body))
+
+(defun ftf-compile ()
+  "Run the `compile' function from the project root."
+  (interactive)
+  (with-ftf-project-root (call-interactively 'compile)))
+
+(defun ftf-gdb ()
+  "Run the `gdb' function from the project root."
+  (interactive)
+  (with-ftf-project-root (call-interactively 'gdb)))
 
 (provide 'find-file-in-project)
 ;;; find-file-in-project.el ends here
