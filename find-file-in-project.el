@@ -66,22 +66,13 @@
 ;;   It uses git-grep for speed when available (such as the Chromium tree),
 ;;   and falls back on a find|xargs grep statement when not.
 
-;; By default, it looks only for files whose names match
-;; `ffip-regexp', but it's understood that that variable will be
-;; overridden locally. This can be done either with a mode hook:
-
-;; (add-hook 'emacs-lisp-mode-hook (lambda (setl ffip-regexp ".*\\.el")))
-
-;; or by setting it in your .emacs-project file, in which case it will
-;; get set locally by the project-local-variables library.
-
-;; You can also be a bit more specific about what files you want to
-;; find. For instance, in a Ruby on Rails project, you may be
-;; interested in all .rb files that don't exist in the "vendor"
-;; directory. In that case you could locally set `ffip-find-options'
-;; to "" from within a hook or your .emacs-project file. The options
-;; accepted in that variable are passed directly to the Unix `find'
-;; command, so any valid arguments for that program are acceptable.
+;; By default, it looks only for files whose names match `ftf-filetypes'. The
+;; defaults were chosen specifically for C++/Chromium development, but people
+;; will probably want to override this so we provide a helper function you can
+;; use in your mode hook, `ftf-add-filetypes'. Example:
+;;
+;; (add-hook 'emacs-lisp-mode-hook
+;;           (lambda (ftf-add-filetypes '("*.el" "*.elisp"))))
 
 ;; If `ido-mode' is enabled, the menu will use `ido-completing-read'
 ;; instead of `completing-read'.
@@ -97,6 +88,13 @@
     "*.vcproj" "*.vsprops" "*.make" "*.gyp" "*.gypi")
   "A list of filetype patterns that grepsource will use. Obviously biased for
 chrome development.")
+
+(defun ftf-add-filetypes (types)
+  "Makes `ftf-filetypes' local to this buffer and adds the
+elements of list types to the list"
+  (make-local-variable 'ftf-filetypes)
+  (dolist (type types)
+    (add-to-list 'ftf-filetypes type)))
 
 (defun ftf-find-locals-directory ()
   "Returns the directory that contains either `.dir-locals.el' or
