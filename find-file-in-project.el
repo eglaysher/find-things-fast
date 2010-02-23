@@ -1,13 +1,14 @@
-;;; find-file-in-project.el --- Find files in a project quickly.
+;;; find-things-fast.el --- Find things fast, leveraging the power of git
 
+;; Copyright (C) 2010 Elliot Glaysher
 ;; Copyright (C) 2006, 2007, 2008 Phil Hagelberg and Doug Alcorn
 
 ;; Author: Phil Hagelberg and Doug Alcorn
 ;; URL: http://www.emacswiki.org/cgi-bin/wiki/FindFileInProject
-;; Version: 2.0
-;; Created: 2008-03-18
+;; Version: 1.0
+;; Created: 2010-02-19
 ;; Keywords: project, convenience
-;; EmacsWiki: FindFileInProject
+;; EmacsWiki: FindThingsFast
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -29,6 +30,26 @@
 ;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
+
+;; This file provides methods that quickly get you to your destination inside
+;; your current project, leveraging the power of git if you are using it to
+;; store your code.
+
+;; A project is defined either as:
+;;
+;; - The git repository that the current buffer is in.
+;; - The project root defined in project-root.el, a library not included with
+;;   GNU Emacs.
+;; - The current default-directory if none of the above is found.
+
+;; When we're in a git repository, we use git-ls-files and git-grep to speed up
+;; our searching. Otherwise, we fallback on find statements. As a special
+;; optimization, we prune ".svn" directories whenever we find.
+
+;; ftf provides two main user functions:
+;;
+;; - `ftf-find-file' which does a quick lookup on all 
+
 
 ;; This file provides a method for quickly finding any file in a given
 ;; project. Projects are defined as per the `project-local-variables'
@@ -64,42 +85,82 @@
 
 ;;; Code:
 
-(require 'project-local-variables)
+(defvar ftf-filetypes
+  '("*.h" "*.hpp" "*.cpp" "*.c" "*.cc" "*.cpp" "*.inl" "*.grd" "*.idl" "*.m"
+    "*.mm" "*.py" "*.sh" "*.cfg" "*SConscript" "SConscript*" "*.scons"
+    "*.vcproj" "*.vsprops" "*.make" "*.gyp" "*.gypi")
+  "A list of filetype patterns that grepsource will use. Obviously biased for
+chrome development.")
 
-(defvar ffip-regexp
-  (concat ".*\\.\\(" (mapconcat (lambda (x) x) '("rb" "rhtml" "el") "\\|") "\\)")
-  "Regexp of things to look for when using find-file-in-project.")
+(defun ftf-get-find-command ()
+  "Creates the raw, shared find command from `ftf-filetypes'."
+  (concat "find . -path '*/.svn' -prune -o -name \""
+          (mapconcat 'identity grepsource-filetypes "\" -or -name \"")
+          "\""))
 
-(defvar ffip-find-options
-  ""
-  "Extra options to pass to `find' when using find-file-in-project.
+;; Adapted from git.el 's git-get-top-dir
+(defun ftf-get-top-git-dir (dir)
+  "Retrieve the top-level directory of a git tree. Returns nil on error"
+  ;; temp buffer for errors in toplevel git rev-parse
+  (with-temp-buffer
+    (if (eq 0 (call-process "git" nil t nil "rev-parse"))
+        (let ((cdup (with-output-to-string
+                      (with-current-buffer standard-output
+                        (cd dir)
+                        (call-process "git" nil t nil
+                                      "rev-parse" "--show-cdup")))))
+          (expand-file-name (concat (file-name-as-directory dir)
+                                    (car (split-string cdup "\n")))))
+      nil)))
 
-Use this to exclude portions of your project: \"-not -regex \\\".*vendor.*\\\"\"")
+(defun ftf-grepsource (cmd-args)
+  "Greps the current project, leveraging local repository data
+  for speed and falling back on a big \"find | xargs grep\"
+  command if we aren't."
+  (interactive (list (read-from-minibuffer "Grep project for string: ")))
+  ;; When we're in a git repository, use git grep so we don't have to
+  ;; find-files.
+  (let ((quoted (replace-regexp-in-string "\"" "\\\\\"" cmd-args))
+        (git-toplevel (ftf-get-top-git-dir default-directory))
+        (default-directory (or (cdr project-details) default-directory))
+        (grep-use-null-device nil))
+    (cond (git-toplevel ;; We can accelerate our grep using the git data.
+           (grep (concat "git --no-pager grep -n -e \"" quoted "\" -- "
+                         (mapconcat 'identity grepsource-filetypes " "))))
+          (t            ;; Fallback on find|xargs
+             (grep (concat (ftf-get-find-command)
+                           " | xargs grep -nH -e \"" quoted "\""))))))
 
-(defvar ffip-project-root nil
-  "If non-nil, overrides the project root directory location.")
+(defun ftf-project-files-string ()
+  "Returns a string with the raw output of ."
+  (let ((git-toplevel (ftf-get-top-git-dir default-directory)))
+    (cond (git-toplevel
+           (shell-command-to-string
+            (concat "git ls-files -- "
+                    (mapconcat 'identity grepsource-filetypes " "))))
+           (t
+            (let ((default-directory (or (cdr project-details)
+                                         default-directory)))
+              (shell-command-to-string (ftf-get-find-command)))))))
 
-(defun ffip-project-files ()
+(defun ftf-project-files-alist ()
   "Return an alist of all filenames in the project and their path.
 
 Files with duplicate filenames are suffixed with the name of the
 directory they are found in so that they are unique."
-  (let ((file-alist nil))
+  (let ((file-alist nil)
+        (default-directory (or (git-get-top-dir default-directory) default-directory)))
     (mapcar (lambda (file)
 	      (let ((file-cons (cons (file-name-nondirectory file)
 				     (expand-file-name file))))
 		(when (assoc (car file-cons) file-alist)
-		  (ffip-uniqueify (assoc (car file-cons) file-alist))
-		  (ffip-uniqueify file-cons))
+		  (ftf-uniqueify (assoc (car file-cons) file-alist))
+		  (ftf-uniqueify file-cons))
 		(add-to-list 'file-alist file-cons)
 		file-cons))
-	    (split-string (shell-command-to-string (concat "find " (or ffip-project-root
-								       (ffip-project-root))
-							   " -type f -regex \""
-							   ffip-regexp
-							   "\" " ffip-find-options))))))
+	    (split-string (ftf-project-files-string)))))
 
-(defun ffip-uniqueify (file-cons)
+(defun ftf-uniqueify (file-cons)
   "Set the car of the argument to include the directory name plus the file name."
   (setcar file-cons
 	  (concat (car file-cons) ": "
@@ -110,9 +171,9 @@ directory they are found in so that they are unique."
 
 The project's scope is defined as the first directory containing
 an `.emacs-project' file. You can override this by locally
-setting the `ffip-project-root' variable."
+setting the `ftf-project-root' variable."
   (interactive)
-  (let* ((project-files (ffip-project-files))
+  (let* ((project-files (ftf-project-files-alist))
 	 (file (if (functionp 'ido-completing-read)
 		   (ido-completing-read "Find file in project: "
 					(mapcar 'car project-files))
@@ -120,9 +181,6 @@ setting the `ffip-project-root' variable."
 				  (mapcar 'car project-files)))))
     (find-file (cdr (assoc file project-files)))))
 
-(defun ffip-project-root (&optional dir)
-  "Find the root of the project defined by presence of `.emacs-project'."
-  (file-name-directory (plv-find-project-file default-directory "")))
 
 (provide 'find-file-in-project)
 ;;; find-file-in-project.el ends here
