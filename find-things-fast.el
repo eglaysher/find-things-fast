@@ -140,7 +140,7 @@ elements of list types to the list"
 (defun ftf-get-find-command ()
   "Creates the raw, shared find command from `ftf-filetypes'."
   (concat "find . -path '*/.svn' -prune -o -name \""
-          (mapconcat 'identity grepsource-filetypes "\" -or -name \"")
+          (mapconcat 'identity ftf-filetypes "\" -or -name \"")
           "\""))
 
 ;; Adapted from git.el 's git-get-top-dir
@@ -178,7 +178,7 @@ if none of the above is found."
         (grep-use-null-device nil))
     (cond (git-toplevel ;; We can accelerate our grep using the git data.
            (grep (concat "git --no-pager grep -n -e \"" quoted "\" -- "
-                         (mapconcat 'identity grepsource-filetypes " "))))
+                         (mapconcat 'identity ftf-filetypes " "))))
           (t            ;; Fallback on find|xargs
              (grep (concat (ftf-get-find-command)
                            " | xargs grep -nH -e \"" quoted "\""))))))
@@ -189,7 +189,7 @@ if none of the above is found."
     (cond (git-toplevel
            (shell-command-to-string
             (concat "git ls-files -- "
-                    (mapconcat 'identity grepsource-filetypes " "))))
+                    (mapconcat 'identity ftf-filetypes " "))))
            (t
             (let ((default-directory (ftf-project-directory)))
               (shell-command-to-string (ftf-get-find-command)))))))
