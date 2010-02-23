@@ -164,10 +164,11 @@ directory they are found in so that they are unique."
                       (dolist (path full-path)
                         (let ((entry (cons file-name path)))
                           (ftf-uniqueify entry)
-                          (add-to-list 'file-alist entry))))
+                          (set 'file-alist (cons entry file-alist)))))
                      (t
-                      (add-to-list 'file-alist
-                                   (cons file-name (car full-path))))))
+                      (set 'file-alist
+                           (cons (cons file-name (car full-path))
+                                 file-alist)))))
              table)
     file-alist))
 
