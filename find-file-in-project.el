@@ -78,11 +78,6 @@
 ;; Recommended binding:
 ;; (global-set-key (kbd "C-x C-M-f") 'find-file-in-project)
 
-;;; TODO:
-
-;; Performance testing with large projects
-;; Switch to using a hash table if it's too slow
-
 ;;; Code:
 
 (defvar ftf-filetypes
@@ -100,7 +95,8 @@ chrome development.")
 
 ;; Adapted from git.el 's git-get-top-dir
 (defun ftf-get-top-git-dir (dir)
-  "Retrieve the top-level directory of a git tree. Returns nil on error"
+  "Retrieve the top-level directory of a git tree. Returns nil on error or if
+not a git repository.."
   ;; temp buffer for errors in toplevel git rev-parse
   (with-temp-buffer
     (if (eq 0 (call-process "git" nil t nil "rev-parse"))
@@ -143,22 +139,37 @@ chrome development.")
                                          default-directory)))
               (shell-command-to-string (ftf-get-find-command)))))))
 
+(defun ftf-project-files-hash ()
+  "Returns a hashtable filled with file names as the key and "
+  (let ((default-directory (or (ftf-get-top-git-dir default-directory)
+                               default-directory))
+        (table (make-hash-table :test 'equal)))
+    (mapcar (lambda (file)
+              (let* ((file-name (file-name-nondirectory file))
+                     (full-path (expand-file-name file))
+                     (pathlist (cons full-path (gethash file-name table nil))))
+                (puthash file-name pathlist table)))
+            (split-string (ftf-project-files-string)))
+    table))
+
 (defun ftf-project-files-alist ()
   "Return an alist of all filenames in the project and their path.
 
 Files with duplicate filenames are suffixed with the name of the
 directory they are found in so that they are unique."
-  (let ((file-alist nil)
-        (default-directory (or (git-get-top-dir default-directory) default-directory)))
-    (mapcar (lambda (file)
-	      (let ((file-cons (cons (file-name-nondirectory file)
-				     (expand-file-name file))))
-		(when (assoc (car file-cons) file-alist)
-		  (ftf-uniqueify (assoc (car file-cons) file-alist))
-		  (ftf-uniqueify file-cons))
-		(add-to-list 'file-alist file-cons)
-		file-cons))
-	    (split-string (ftf-project-files-string)))))
+  (let ((table (ftf-project-files-hash))
+        file-alist)
+    (maphash (lambda (file-name full-path)
+               (cond ((> (length full-path) 1)
+                      (dolist (path full-path)
+                        (let ((entry (cons file-name path)))
+                          (ftf-uniqueify entry)
+                          (add-to-list 'file-alist entry))))
+                     (t
+                      (add-to-list 'file-alist
+                                   (cons file-name (car full-path))))))
+             table)
+    file-alist))
 
 (defun ftf-uniqueify (file-cons)
   "Set the car of the argument to include the directory name plus the file name."
