@@ -3,8 +3,8 @@
 ;; Copyright (C) 2010 Elliot Glaysher
 ;; Copyright (C) 2006, 2007, 2008 Phil Hagelberg and Doug Alcorn
 
-;; Author: Phil Hagelberg and Doug Alcorn
-;; URL: http://www.emacswiki.org/cgi-bin/wiki/FindFileInProject
+;; Author: Elliot Glaysher and Phil Hagelberg and Doug Alcorn
+;; URL: 
 ;; Version: 1.0
 ;; Created: 2010-02-19
 ;; Keywords: project, convenience
@@ -82,11 +82,15 @@
 ;; If `ido-mode' is enabled, the menu will use `ido-completing-read'
 ;; instead of `completing-read'.
 
+;; This file was based on the `find-file-in-project.el' by Phil Hagelberg and
+;; Doug Alcorn which can be found on the EmacsWiki. Obviously, the scope has
+;; greatly expanded.
+
 ;; Recommended binding:
 ;; (global-set-key (kbd [f1]) 'ftf-find-file)
 ;; (global-set-key (kbd [f2]) 'ftf-grepsource)
 ;; (global-set-key (kbd [f4]) 'ftf-gdb)
-;; (global-set-key (kbd [f4]) 'ftf-compile)
+;; (global-set-key (kbd [f5]) 'ftf-compile)
 
 ;;; Code:
 
@@ -263,5 +267,5 @@ custom functions which might want to run "
   (interactive)
   (with-ftf-project-root (call-interactively 'gdb)))
 
-(provide 'find-file-in-project)
-;;; find-file-in-project.el ends here
+(provide 'find-things-fast)
+;;; find-things-fast.el ends here
