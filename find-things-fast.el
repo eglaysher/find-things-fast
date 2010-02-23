@@ -254,7 +254,7 @@ if none of the above is found."
   "Run BODY with `default-directory' set to what the
 find-things-fast project root. A utility macro for any of your
 custom functions which might want to run "
-  `(let ((default-directory ,(ftf-project-directory)))
+  `(let ((default-directory (ftf-project-directory)))
           ,@body))
 
 (defun ftf-compile ()
