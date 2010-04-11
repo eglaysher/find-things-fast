@@ -134,7 +134,7 @@ elements of list types to the list"
       (ftf-get-top-git-dir default-directory)
       ;; `project-details' is defined in the `project-root.el' package. This
       ;; will be nil if it doesn't exist.
-      (cdr project-details)
+      (if (boundp 'project-details) (cdr project-details) nil)
       default-directory))
 
 (defun ftf-get-find-command ()
