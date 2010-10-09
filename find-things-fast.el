@@ -177,8 +177,8 @@ if none of the above is found."
         (default-directory (ftf-project-directory))
         (grep-use-null-device nil))
     (cond (git-toplevel ;; We can accelerate our grep using the git data.
-           (grep (concat "git --no-pager grep -n -e \"" quoted "\" -- "
-                         (mapconcat 'identity ftf-filetypes " "))))
+           (grep (concat "git --no-pager grep -n -e \"" quoted "\" -- \""
+                         (mapconcat 'identity ftf-filetypes "\" \"") "\"")))
           (t            ;; Fallback on find|xargs
              (grep (concat (ftf-get-find-command)
                            " | xargs grep -nH -e \"" quoted "\""))))))
@@ -188,8 +188,8 @@ if none of the above is found."
   (let ((git-toplevel (ftf-get-top-git-dir default-directory)))
     (cond (git-toplevel
            (shell-command-to-string
-            (concat "git ls-files -- "
-                    (mapconcat 'identity ftf-filetypes " "))))
+            (concat "git ls-files -- \""
+                    (mapconcat 'identity ftf-filetypes "\" \"") "\"")))
            (t
             (let ((default-directory (ftf-project-directory)))
               (shell-command-to-string (ftf-get-find-command)))))))
