@@ -159,6 +159,25 @@ not a git repository.."
                                     (car (split-string cdup "\n")))))
       nil)))
 
+(defun ftf-interactive-default-read (string)
+  "Gets interactive arguments for a function. This reuses your
+current major mode's find-tag-default-function if possible,
+otherwise defaulting to `find-tag-default'."
+  (list
+   (let* ((default (funcall (or (get major-mode 'find-tag-default-function)
+                                'find-tag-default)))
+          (spec (read-from-minibuffer
+                 (if default
+                     (format "%s (default %s): "
+                             (substring string 0
+                                        (string-match "[ :]+\\'" string))
+                             default)
+                   string)
+                 nil nil nil default nil)))
+    (if (equal spec "")
+        (or default (error "There is no default symbol to grep for."))
+      spec))))
+
 (defun ftf-grepsource (cmd-args)
   "Greps the current project, leveraging local repository data
 for speed and falling back on a big \"find | xargs grep\"
@@ -169,7 +188,7 @@ either a `.dir-locals.el' file or an `.emacs-project' file OR the
 root of the current git repository OR a project root defined by
 the optional `project-root.el' package OR the default directory
 if none of the above is found."
-  (interactive (list (read-from-minibuffer "Grep project for string: ")))
+  (interactive (ftf-interactive-default-read "Grep project for string: "))
   ;; When we're in a git repository, use git grep so we don't have to
   ;; find-files.
   (let ((quoted (replace-regexp-in-string "\"" "\\\\\"" cmd-args))
@@ -178,7 +197,8 @@ if none of the above is found."
         (grep-use-null-device nil))
     (cond (git-toplevel ;; We can accelerate our grep using the git data.
            (grep (concat "git --no-pager grep -n -e \"" quoted "\" -- \""
-                         (mapconcat 'identity ftf-filetypes "\" \"") "\"")))
+                         (mapconcat 'identity ftf-filetypes "\" \"")
+                         "\"")))
           (t            ;; Fallback on find|xargs
              (grep (concat (ftf-get-find-command)
                            " | xargs grep -nH -e \"" quoted "\""))))))
@@ -189,7 +209,8 @@ if none of the above is found."
     (cond (git-toplevel
            (shell-command-to-string
             (concat "git ls-files -- \""
-                    (mapconcat 'identity ftf-filetypes "\" \"") "\"")))
+                    (mapconcat 'identity ftf-filetypes "\" \"")
+                    "\"")))
            (t
             (let ((default-directory (ftf-project-directory)))
               (shell-command-to-string (ftf-get-find-command)))))))
