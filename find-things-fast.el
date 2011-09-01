@@ -264,12 +264,15 @@ the optional `project-root.el' package OR the default directory
 if none of the above is found."
   (interactive)
   (let* ((project-files (ftf-project-files-alist))
-	 (file (if (functionp 'ido-completing-read)
-		   (ido-completing-read "Find file in project: "
-					(mapcar 'car project-files))
-		 (completing-read "Find file in project: "
-				  (mapcar 'car project-files)))))
-    (find-file (cdr (assoc file project-files)))))
+	 (filename (if (functionp 'ido-completing-read)
+                   (ido-completing-read "Find file in project: "
+                                        (mapcar 'car project-files))
+                 (completing-read "Find file in project: "
+                                  (mapcar 'car project-files))))
+     (file (cdr (assoc filename project-files))))
+    (if file
+        (find-file file)
+      (error "No such file."))))
 
 (defmacro with-ftf-project-root (&rest body)
   "Run BODY with `default-directory' set to what the
