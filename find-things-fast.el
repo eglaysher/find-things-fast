@@ -196,7 +196,9 @@ if none of the above is found."
         (default-directory (ftf-project-directory))
         (grep-use-null-device nil))
     (cond (git-toplevel ;; We can accelerate our grep using the git data.
-           (grep (concat "git --no-pager grep -n -e \"" quoted "\" -- \""
+           (grep (concat "git --no-pager grep --no-color -n -e \""
+                         quoted
+                         "\" -- \""
                          (mapconcat 'identity ftf-filetypes "\" \"")
                          "\"")))
           (t            ;; Fallback on find|xargs
