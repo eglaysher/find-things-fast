@@ -4,7 +4,7 @@
 ;; Copyright (C) 2006, 2007, 2008 Phil Hagelberg and Doug Alcorn
 
 ;; Author: Elliot Glaysher and Phil Hagelberg and Doug Alcorn
-;; URL: 
+;; URL: https://github.com/eglaysher/find-things-fast
 ;; Version: 1.0
 ;; Created: 2010-02-19
 ;; Keywords: project, convenience
@@ -209,10 +209,10 @@ if none of the above is found."
   "Returns a string with the raw output of ."
   (let ((git-toplevel (ftf-get-top-git-dir default-directory)))
     (cond (git-toplevel
-           (shell-command-to-string
-            (concat "git ls-files -- \""
-                    (mapconcat 'identity ftf-filetypes "\" \"")
-                    "\"")))
+           ;; Please don't filter file types based on extension here.
+           ;; We also need to edit files with no extensions.
+           (concat (shell-command-to-string "git ls-files")
+                   (shell-command-to-string "git ls-files -o")))
            (t
             (let ((default-directory (ftf-project-directory)))
               (shell-command-to-string (ftf-get-find-command)))))))
@@ -253,8 +253,8 @@ directory they are found in so that they are unique."
   "Set the car of the argument to include the directory name plus
 the file name."
   (setcar file-cons
-	  (concat (car file-cons) ": "
-		  (cadr (reverse (split-string (cdr file-cons) "/"))))))
+          (concat (car file-cons) ": "
+                  (cadr (reverse (split-string (cdr file-cons) "/"))))))
 
 (defun ftf-find-file ()
   "Prompt with a completing list of all files in the project to find one.
@@ -266,7 +266,7 @@ the optional `project-root.el' package OR the default directory
 if none of the above is found."
   (interactive)
   (let* ((project-files (ftf-project-files-alist))
-	 (filename (if (functionp 'ido-completing-read)
+         (filename (if (functionp 'ido-completing-read)
                    (ido-completing-read "Find file in project: "
                                         (mapcar 'car project-files))
                  (completing-read "Find file in project: "
