@@ -253,8 +253,8 @@ directory they are found in so that they are unique."
   "Set the car of the argument to include the directory name plus
 the file name."
   (setcar file-cons
-	  (concat (car file-cons) ": "
-		  (cadr (reverse (split-string (cdr file-cons) "/"))))))
+          (concat (car file-cons) ": "
+                  (cadr (reverse (split-string (cdr file-cons) "/"))))))
 
 (defun ftf-find-file ()
   "Prompt with a completing list of all files in the project to find one.
@@ -266,7 +266,7 @@ the optional `project-root.el' package OR the default directory
 if none of the above is found."
   (interactive)
   (let* ((project-files (ftf-project-files-alist))
-	 (filename (if (functionp 'ido-completing-read)
+         (filename (if (functionp 'ido-completing-read)
                    (ido-completing-read "Find file in project: "
                                         (mapcar 'car project-files))
                  (completing-read "Find file in project: "
