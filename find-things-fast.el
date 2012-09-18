@@ -4,7 +4,7 @@
 ;; Copyright (C) 2006, 2007, 2008 Phil Hagelberg and Doug Alcorn
 
 ;; Author: Elliot Glaysher and Phil Hagelberg and Doug Alcorn
-;; URL: 
+;; URL:
 ;; Version: 1.0
 ;; Created: 2010-02-19
 ;; Keywords: project, convenience
@@ -132,6 +132,7 @@ elements of list types to the list"
   "Returns what we should use as `default-directory'."
   (or (ftf-find-locals-directory)
       (ftf-get-top-git-dir default-directory)
+      (ftf-get-top-hg-dir default-directory)
       ;; `project-details' is defined in the `project-root.el' package. This
       ;; will be nil if it doesn't exist.
       (if (boundp 'project-details) (cdr project-details) nil)
@@ -157,6 +158,18 @@ not a git repository.."
                                       "rev-parse" "--show-cdup")))))
           (expand-file-name (concat (file-name-as-directory dir)
                                     (car (split-string cdup "\n")))))
+      nil)))
+
+;; Equivalent to ftf-get-top-git-dir, only for mercurial
+(defun ftf-get-top-hg-dir (dir)
+  "Retrieve the top-level directory of a mercurial tree. Returns nil on error or if not a mercurial repository."
+  (with-temp-buffer
+    (cd dir)
+    (if (eq 0 (call-process "hg" nil nil nil "root"))
+	(let ((root (with-output-to-string
+		      (with-current-buffer standard-output
+			(call-process "hg" nil t nil "root")))))
+	  (file-name-as-directory (car (split-string root "\n"))))
       nil)))
 
 (defun ftf-interactive-default-read (string)
