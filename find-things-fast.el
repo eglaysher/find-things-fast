@@ -163,14 +163,15 @@ not a git repository.."
 ;; Equivalent to ftf-get-top-git-dir, only for mercurial
 (defun ftf-get-top-hg-dir (dir)
   "Retrieve the top-level directory of a mercurial tree. Returns nil on error or if not a mercurial repository."
-  (with-temp-buffer
-    (cd dir)
-    (if (eq 0 (call-process "hg" nil nil nil "root"))
-	(let ((root (with-output-to-string
-		      (with-current-buffer standard-output
-			(call-process "hg" nil t nil "root")))))
-	  (file-name-as-directory (car (split-string root "\n"))))
-      nil)))
+  (if (executable-find "hg")
+      (with-temp-buffer
+	(cd dir)
+	(if (eq 0 (call-process "hg" nil nil nil "root"))
+	    (let ((root (with-output-to-string
+			  (with-current-buffer standard-output
+			    (call-process "hg" nil t nil "root")))))
+	      (file-name-as-directory (car (split-string root "\n"))))
+	  nil))))
 
 (defun ftf-interactive-default-read (string)
   "Gets interactive arguments for a function. This reuses your
