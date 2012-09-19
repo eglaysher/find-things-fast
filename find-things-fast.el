@@ -1,9 +1,10 @@
 ;;; find-things-fast.el --- Find things fast, leveraging the power of git
 
+;; Copyright (C) 2012 Elvio Toccalino
 ;; Copyright (C) 2010 Elliot Glaysher
 ;; Copyright (C) 2006, 2007, 2008 Phil Hagelberg and Doug Alcorn
 
-;; Author: Elliot Glaysher and Phil Hagelberg and Doug Alcorn
+;; Author: Elvio Tocclaino and Elliot Glaysher and Phil Hagelberg and Doug Alcorn
 ;; URL:
 ;; Version: 1.0
 ;; Created: 2010-02-19
