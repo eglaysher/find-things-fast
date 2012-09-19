@@ -42,13 +42,14 @@
 ;; - The presence of a `.dir-locals.el' file (emacs23 style) or a
 ;;   `.emacs-project' file (`project-local-variables' style).
 ;; - The git repository that the current buffer is in.
+;; - The mercurial repository the current buffer is in.
 ;; - The project root defined in `project-root.el', a library not included with
 ;;   GNU Emacs.
 ;; - The current default-directory if none of the above is found.
 
 ;; When we're in a git repository, we use git-ls-files and git-grep to speed up
 ;; our searching. Otherwise, we fallback on find statements. As a special
-;; optimization, we prune ".svn" directories whenever we find.
+;; optimization, we prune ".svn" and ".hg" directories whenever we find.
 
 ;; ftf provides three main user functions:
 ;;
@@ -141,7 +142,7 @@ elements of list types to the list"
 
 (defun ftf-get-find-command ()
   "Creates the raw, shared find command from `ftf-filetypes'."
-  (concat "find . -path '*/.svn' -prune -o -name \""
+  (concat "find . -path '*/.svn' -prune -o -path '*/.hg' -prune -o -name \""
           (mapconcat 'identity ftf-filetypes "\" -or -name \"")
           "\""))
 
@@ -200,9 +201,9 @@ command if we aren't.
 
 The project's scope is defined first as a directory containing
 either a `.dir-locals.el' file or an `.emacs-project' file OR the
-root of the current git repository OR a project root defined by
-the optional `project-root.el' package OR the default directory
-if none of the above is found."
+root of the current git or mercurial repository OR a project root
+defined by the optional `project-root.el' package OR the default
+directory if none of the above is found."
   (interactive (ftf-interactive-default-read "Grep project for string: "))
   ;; When we're in a git repository, use git grep so we don't have to
   ;; find-files.
@@ -276,9 +277,9 @@ the file name."
 
 The project's scope is defined first as a directory containing
 either a `.dir-locals.el' file or an `.emacs-project' file OR the
-root of the current git repository OR a project root defined by
-the optional `project-root.el' package OR the default directory
-if none of the above is found."
+root of the current git or mercurial repository OR a project root
+defined by the optional `project-root.el' package OR the default
+directory if none of the above is found."
   (interactive)
   (let* ((project-files (ftf-project-files-alist))
 	 (filename (if (functionp 'ido-completing-read)
