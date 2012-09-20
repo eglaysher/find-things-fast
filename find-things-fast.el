@@ -4,7 +4,7 @@
 ;; Copyright (C) 2010 Elliot Glaysher
 ;; Copyright (C) 2006, 2007, 2008 Phil Hagelberg and Doug Alcorn
 
-;; Author: Elvio Tocclaino and Elliot Glaysher and Phil Hagelberg and Doug Alcorn
+;; Author: Elvio Toccalino and Elliot Glaysher and Phil Hagelberg and Doug Alcorn
 ;; URL:
 ;; Version: 1.0
 ;; Created: 2010-02-19
