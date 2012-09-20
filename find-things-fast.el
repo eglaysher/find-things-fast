@@ -1,10 +1,11 @@
 ;;; find-things-fast.el --- Find things fast, leveraging the power of git
 
+;; Copyright (C) 2012 Elvio Toccalino
 ;; Copyright (C) 2010 Elliot Glaysher
 ;; Copyright (C) 2006, 2007, 2008 Phil Hagelberg and Doug Alcorn
 
-;; Author: Elliot Glaysher and Phil Hagelberg and Doug Alcorn
-;; URL: 
+;; Author: Elvio Toccalino and Elliot Glaysher and Phil Hagelberg and Doug Alcorn
+;; URL:
 ;; Version: 1.0
 ;; Created: 2010-02-19
 ;; Keywords: project, convenience
@@ -41,13 +42,14 @@
 ;; - The presence of a `.dir-locals.el' file (emacs23 style) or a
 ;;   `.emacs-project' file (`project-local-variables' style).
 ;; - The git repository that the current buffer is in.
+;; - The mercurial repository the current buffer is in.
 ;; - The project root defined in `project-root.el', a library not included with
 ;;   GNU Emacs.
 ;; - The current default-directory if none of the above is found.
 
 ;; When we're in a git repository, we use git-ls-files and git-grep to speed up
 ;; our searching. Otherwise, we fallback on find statements. As a special
-;; optimization, we prune ".svn" directories whenever we find.
+;; optimization, we prune ".svn" and ".hg" directories whenever we find.
 
 ;; ftf provides three main user functions:
 ;;
@@ -132,6 +134,7 @@ elements of list types to the list"
   "Returns what we should use as `default-directory'."
   (or (ftf-find-locals-directory)
       (ftf-get-top-git-dir default-directory)
+      (ftf-get-top-hg-dir default-directory)
       ;; `project-details' is defined in the `project-root.el' package. This
       ;; will be nil if it doesn't exist.
       (if (boundp 'project-details) (cdr project-details) nil)
@@ -139,7 +142,7 @@ elements of list types to the list"
 
 (defun ftf-get-find-command ()
   "Creates the raw, shared find command from `ftf-filetypes'."
-  (concat "find . -path '*/.svn' -prune -o -name \""
+  (concat "find . -path '*/.svn' -prune -o -path '*/.hg' -prune -o -name \""
           (mapconcat 'identity ftf-filetypes "\" -or -name \"")
           "\""))
 
@@ -158,6 +161,19 @@ not a git repository.."
           (expand-file-name (concat (file-name-as-directory dir)
                                     (car (split-string cdup "\n")))))
       nil)))
+
+;; Equivalent to ftf-get-top-git-dir, only for mercurial
+(defun ftf-get-top-hg-dir (dir)
+  "Retrieve the top-level directory of a mercurial tree. Returns nil on error or if not a mercurial repository."
+  (if (executable-find "hg")
+      (with-temp-buffer
+	(cd dir)
+	(if (eq 0 (call-process "hg" nil nil nil "root"))
+	    (let ((root (with-output-to-string
+			  (with-current-buffer standard-output
+			    (call-process "hg" nil t nil "root")))))
+	      (file-name-as-directory (car (split-string root "\n"))))
+	  nil))))
 
 (defun ftf-interactive-default-read (string)
   "Gets interactive arguments for a function. This reuses your
@@ -185,9 +201,9 @@ command if we aren't.
 
 The project's scope is defined first as a directory containing
 either a `.dir-locals.el' file or an `.emacs-project' file OR the
-root of the current git repository OR a project root defined by
-the optional `project-root.el' package OR the default directory
-if none of the above is found."
+root of the current git or mercurial repository OR a project root
+defined by the optional `project-root.el' package OR the default
+directory if none of the above is found."
   (interactive (ftf-interactive-default-read "Grep project for string: "))
   ;; When we're in a git repository, use git grep so we don't have to
   ;; find-files.
@@ -261,9 +277,9 @@ the file name."
 
 The project's scope is defined first as a directory containing
 either a `.dir-locals.el' file or an `.emacs-project' file OR the
-root of the current git repository OR a project root defined by
-the optional `project-root.el' package OR the default directory
-if none of the above is found."
+root of the current git or mercurial repository OR a project root
+defined by the optional `project-root.el' package OR the default
+directory if none of the above is found."
   (interactive)
   (let* ((project-files (ftf-project-files-alist))
 	 (filename (if (functionp 'ido-completing-read)
