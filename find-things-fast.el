@@ -79,7 +79,7 @@
 ;; use in your mode hook, `ftf-add-filetypes'. Example:
 ;;
 ;; (add-hook 'emacs-lisp-mode-hook
-;;           (lambda (ftf-add-filetypes '("*.el" "*.elisp"))))
+;;           (lambda () (ftf-add-filetypes '("*.el" "*.elisp"))))
 
 ;; If `ido-mode' is enabled, the menu will use `ido-completing-read'
 ;; instead of `completing-read'.
