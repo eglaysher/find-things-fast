@@ -96,19 +96,31 @@
 
 ;;; Code:
 ;;;###autoload
-(defvar ftf-filetypes
+(defgroup find-things-fast nil
+  "Findind files in projects fast."
+  :group 'tools)
+
+(defcustom ftf-filetypes
   '("*.h" "*.hpp" "*.cpp" "*.c" "*.cc" "*.cpp" "*.inl" "*.grd" "*.idl" "*.m"
     "*.mm" "*.py" "*.sh" "*.cfg" "*SConscript" "SConscript*" "*.scons"
     "*.vcproj" "*.vsprops" "*.make" "*.gyp" "*.gypi")
   "A list of filetype patterns that grepsource will use. Obviously biased for
-chrome development.")
+chrome development."
+  :group 'find-things-fast
+  :type '(repeat string))
 
 (defcustom ftf-project-finders
   '(ftf-find-locals-directory
     ftf-get-top-git-dir
     ftf-get-top-hg-dir)
   "A list of function names that are called in order when
-  determining the project root dir.")
+determining the project root dir."
+  :group 'find-things-fast
+  :type  '(repeat (choice (const :tag "Search for directory containing .dir-locals.el or .emacs-project" ftf-find-locals-directory)
+                          (const :tag "Search for directory containing .emacs-project" ftf-find-emacs-proejct-directory)
+                          (const :tag "Search for directory containing .dir-locals.el" ftf-find-dir-locals-directory)
+                          (const :tag "Search for git repository top directory" ftf-get-top-git-dir)
+                          (const :tag "Search for Mercurial repository top directory" ftf-get-top-hg-dir))))
 
 ;;;###autoload
 (defun ftf-add-filetypes (types)
