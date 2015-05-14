@@ -167,6 +167,7 @@ no path components contain such a directory."
 or nil if no path components contain such a directory."
   (ftf-find-directory-containing ".emacs-project"))
 
+;;;###autoload
 (defun ftf-project-directory ()
   "Returns what we should use as `default-directory'."
   (or (car (remove nil (mapcar 'funcall ftf-project-finders)))
@@ -331,6 +332,7 @@ directory if none of the above is found."
         (find-file file)
       (error "No such file."))))
 
+;;;###autoload
 (defmacro with-ftf-project-root (&rest body)
   "Run BODY with `default-directory' set to what the
 find-things-fast project root. A utility macro for any of your
