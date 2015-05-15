@@ -246,6 +246,10 @@ directory if none of the above is found."
   (interactive (ftf-interactive-default-read "Grep project for string: "))
   ;; When we're in a git repository, use git grep so we don't have to
   ;; find-files.
+  ;;
+  ;; TODO(erg): The `grep-use-null-device' below doesn't actually work;
+  ;; grep-mode does some weird stuff and we have to call a
+  ;; `grep-apply-setting'?
   (let ((quoted (replace-regexp-in-string "\"" "\\\\\"" cmd-args))
         (git-toplevel (ftf-get-top-git-dir default-directory))
         (default-directory (ftf-project-directory))
