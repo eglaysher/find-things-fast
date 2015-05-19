@@ -322,7 +322,9 @@ defined by the optional `project-root.el' package OR the default
 directory if none of the above is found."
   (interactive)
   (let* ((project-files (ftf-project-files-alist))
-	 (filename (if (and ido-mode (functionp 'ido-completing-read))
+	 (filename (if (and (boundp 'ido-mode)
+			    ido-mode
+			    (functionp 'ido-completing-read))
                    (ido-completing-read "Find file in project: "
                                         (mapcar 'car project-files))
                  (completing-read "Find file in project: "
